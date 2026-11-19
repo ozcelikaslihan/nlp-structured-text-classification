@@ -1,0 +1,35 @@
+{
+  "generated_at_utc": "2026-11-19T14:22:38.925589+00:00",
+  "is_final_run": true,
+  "matching_rule": "exact",
+  "settings": {
+    "prompt_only": {
+      "n_samples": 105,
+      "raw_json_success_rate": 0.9809523809523809,
+      "cleaned_json_success_rate": 0.9809523809523809,
+      "schema_validity_rate": 0.9238095238095239,
+      "classification_accuracy": 0.49523809523809526,
+      "entity_precision_micro": 0.4072072072072072,
+      "entity_recall_micro": 0.23814541622760801,
+      "entity_f1_micro": 0.30053191489361697,
+      "entity_tp": 226,
+      "entity_fp": 329,
+      "entity_fn": 723,
+      "mean_response_seconds": 1.6138311657146829
+    },
+    "schema_constrained": {
+      "n_samples": 105,
+      "raw_json_success_rate": 0.9904761904761905,
+      "cleaned_json_success_rate": 0.9904761904761905,
+      "schema_validity_rate": 0.9904761904761905,
+      "classification_accuracy": 0.5428571428571428,
+      "entity_precision_micro": 0.32697201017811706,
+      "entity_recall_micro": 0.2708113804004215,
+      "entity_f1_micro": 0.29625360230547554,
+      "entity_tp": 257,
+      "entity_fp": 529,
+      "entity_fn": 692,
+      "mean_response_seconds": 1.4715749209524975
+    }
+  }
+}

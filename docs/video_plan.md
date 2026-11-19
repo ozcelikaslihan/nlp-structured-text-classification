@@ -28,11 +28,13 @@ own words.
 
 Answer all four A questions, then one chosen question from each B–G:
 
-- A1: choose the `json.loads(raw)` line. Temporarily remove/bypass it and show
-  that raw-success can no longer be measured correctly even for valid raw JSON.
-- A2: name a real rejected AI suggestion from your work log (for example,
-  automatically generating gold entities) and explain why it violates a valid
-  gold-standard methodology. Only say this if it is true.
+- A1: show `return text[start : index + 1]` in `_first_balanced_json_object`.
+  Run `python scripts/defense_ablation.py` to compare the original function with
+  an isolated copy in which that one return is removed (`pass` keeps valid syntax).
+  Explain that the fixture is synthetic, not a test metric.
+- A2: discuss the added category tie-break rules that were rejected after
+  development accuracy fell from 60.0% to 57.1%. Explain this decision in your
+  own words; do not claim you personally made decisions you did not review.
 - A3: use the actually most surprising measured result.
 - A4: compare both rows of the final result table.
 - B1: contrast an n-gram's local count/probability table with a Transformer's
@@ -42,8 +44,9 @@ Answer all four A questions, then one chosen question from each B–G:
 - D1: state `Q4_K_M` and show how `ollama show qwen2.5:3b` verifies it.
 - E1: explain that a tokenizer trained on a distribution dominated by other
   languages often represents Turkish agglutinative forms with more subword pieces.
-- F6: optimize system prompts on a separate development set, select by a
-  predeclared combined metric, and never tune on the held-out test set.
+- F6: explain development-set prompt selection using accuracy and format
+  validity. No combined metric was predeclared in this project. Acknowledge the
+  initial exploratory test inspection before the final split was frozen.
 - G1: TF-IDF logistic regression may beat a small zero-shot LLM when abundant
   in-domain labeled data and stable lexical cues exist, but it does not perform
   entity extraction without a separate model.

@@ -1,0 +1,1 @@
+{"model":"qwen2.5:3b","seed":42,"temperature":1.0,"top_k":40,"top_p":0.9,"num_ctx":4096,"num_predict":512,"keep_alive":"10m","entity_matching":"exact","minimum_samples":100,"dataset_seed":20261109}

@@ -1,169 +1,132 @@
-# Local LLM Structured Output Evaluation (Project I)
+# NLP Project I: Local structured output evaluation
 
-This repository evaluates a **fully local Ollama model** on two simultaneous
-Turkish NLP tasks:
+Python and local Ollama inference classify Turkish news into seven categories
+and extract PERSON, ORGANIZATION and LOCATION names. No cloud LLM API is used.
 
-1. classify TTC-4900 news into `dunya`, `ekonomi`, `kultur`, `saglik`,
-   `siyaset`, `spor`, or `teknoloji`;
-2. extract `PERSON`, `ORGANIZATION`, and `LOCATION` entities.
+## Current status (19 November 2026)
 
-The paired experiment compares prompt-only JSON generation with JSON-schema
-constrained generation. The prompt, model, sample order, seed, and generation
-options are identical; the constrained condition alone receives Ollama's
-`format` parameter. No cloud LLM API is used.
+- 105 manually reviewed articles, 949 gold entity annotations.
+- Completed paired runs at temperatures 0 and 1: 420 saved model outputs.
+- Three-page English technical report: [PDF](outputs/technical_report.pdf).
+- Video recording and upload, public viewing links and submission remain.
+- Model eligibility needs clarification: Qwen2.5-3B uses the Qwen Research
+  License, not Apache-2.0. Do not describe this as confirmed compliance with a
+  strict open-source license requirement.
+  [Official license](https://huggingface.co/Qwen/Qwen2.5-3B-Instruct/blob/main/LICENSE)
 
-> Project status (18 November 2026): Python 3.13.17, dependencies, Ollama
-> 0.40.16, `qwen2.5:3b` Q4_K_M, TTC-4900, the disjoint development set, and the
-> 105-item annotation batch are ready; all tests pass. **Manual gold entity
-> annotation**, final runs, error analysis, the report PDF, and video recording
-> still have to be completed.
+## Reproduce the saved evaluation
 
-## Requirements covered by design
+Run from this repository's root. The measured environment was Python 3.13.17,
+Ollama 0.40.16, ollama Python package 0.6.1 and Pydantic 2.12.4.
+Python >=3.11 is declared supported; other versions were not used for the report.
 
-- 105 fixed evaluation documents (15 from each of 7 classes), exceeding the
-  required 100. Texts are deterministically sampled from the 300–2500 character
-  range so the complete input fits the declared local context budget.
-- Manually annotated entity gold labels with written rules and fail-fast
-  validation.
-- Strict JSON schema shared by prompt, Ollama `format`, and Pydantic validation.
-- Separate raw `json.loads` rate and post-cleaning parse rate.
-- Schema validity, classification accuracy, and typed micro entity P/R/F1.
-- Turkish-aware `İ/i` and `I/ı` normalization and a stated exact-match rule.
-- Exceptions are saved as failed records so a long run continues; runs resume
-  without repeating completed calls.
-- Manifest captures exact model details, quantization, Ollama version, Python,
-  platform, config, and annotation hash.
-- A repeatable live demo uses both settings, temperatures 0 and 1.0, the same
-  dataset examples, and five new examples including an ambiguous expected error.
-
-## 1. Install (Windows PowerShell)
-
-Python 3.11 or 3.12 and Ollama are required. From this repository:
-
-```powershell
-py -3.12 -m venv .venv
+~~~powershell
+py -3.13 -m venv .venv
 .\.venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 python -m pip install -e .
 python -m pytest
-```
+python scripts/validate_annotations.py
+python scripts/audit_submission.py
+~~~
 
-Start Ollama, then download the exact configured model:
+The audit recomputes metrics from saved raw model outputs without calling Ollama.
+The authoritative frozen gold file is
+`outputs/reviewed_annotations_20261119.jsonl`, used by default in validation,
+experiments and the live demo. `data/annotations/eval_gold.jsonl` is the old
+working annotation file, not the gold used for the report. Do not rerun
+annotation preparation over the frozen file.
 
-```powershell
-ollama serve
+To generate new predictions, start local Ollama and obtain `qwen2.5:3b`.
+Check `ollama show qwen2.5:3b` for Q4_K_M; the measured local ID was
+357c53fb659c (3.1B parameters). A tag can change upstream, so compare metadata.
+Hardware used: RTX 3050 Laptop, 4 GB VRAM.
+
+~~~powershell
 ollama pull qwen2.5:3b
 ollama show qwen2.5:3b
-ollama ps
-```
+python scripts/run_experiment.py --limit 2 --output-dir results/new_smoke
+python scripts/run_experiment.py --output-dir results/new_main
+python scripts/run_experiment.py --config configs/temperature1.json --output-dir results/new_temperature1
+~~~
 
-The installed tag is suitable for a 4 GB RTX 3050 laptop GPU. `ollama show`
-must confirm that its quantization is `Q4_K_M`; the report should state the
-actual tag (`qwen2.5:3b`) and quantization as separate reproducibility fields.
-Do not replace the real local tag with a longer library alias in the report.
+New runs go to separate directories so the reported evidence remains intact.
+Resume with the same command, config and annotations. Main parameters:
+temperature=0, seed=42, top_k=40, top_p=0.9, num_ctx=4096, num_predict=512,
+keep_alive=10m, stream=false. The secondary config changes only temperature to 1.
+Unspecified options use Ollama defaults.
 
-## 2. Prepare the data and gold annotations
+## Data and methodology
 
-```powershell
-python scripts/download_dataset.py
-python scripts/inspect_dataset.py
-python scripts/prepare_annotation_batch.py
-```
+TTC-4900 supplies class labels; entity labels were selected manually from scratch
+by one annotator using the browser interface. Sampling seed 20261109 selects
+15 articles per class (105 evaluation articles) and 5 per class (35 development
+articles), restricted to 300–2500 characters. This is a length filter, not a
+guarantee that all prompts and responses fit the token budget.
 
-Manually edit `data/annotations/eval_gold.jsonl`. For every line, fill
-`gold_entities` and set `annotation_complete` to `true`. Follow every rule in
-[data/README.md](data/README.md). Then run:
+Follow [annotation rules](data/README.md). Entity scoring is typed exact matching
+after NFC, whitespace normalization and Turkish-aware casing (İ→i, I→ı before
+lowercasing). Invalid schema outputs count as wrong classes and empty entity
+predictions. Repeated predicted entities are penalized.
 
-```powershell
-python scripts/annotate_entities.py
-python scripts/validate_annotations.py
-```
+Both conditions have identical messages and generation parameters; only the
+schema-constrained condition receives the Ollama `format` key. The report
+separates direct raw JSON parsing, parsing after cleaning, schema validity,
+classification accuracy and micro entity F1. Cleaning does not repair truncated
+JSON. Development choices and limitations are in [the decision log](docs/decision_log.md).
+One preliminary test article was inspected before freezing the split.
 
-The annotation tool is human-only: it never calls a model, requires exact source
-spans, saves after every record, and creates a local backup when it starts.
+## Reported results
 
-The validator checks at least 100 records, allowed labels/types, unique IDs,
-exact source spans, JSON syntax, and completion flags. Commit the completed gold
-file; it is part of the reproducible evaluation artifact.
+| Temperature | Setting | Raw JSON | Clean JSON | Schema | Accuracy | Entity F1 |
+|---|---|---|---|---|---|---|
+| 0 | Prompt-only | 98.10% | 98.10% | 92.38% | 49.52% | 30.05% |
+| 0 | Schema | 99.05% | 99.05% | 99.05% | 54.29% | 29.63% |
+| 1 | Prompt-only | 98.10% | 98.10% | 96.19% | 52.38% | 27.46% |
+| 1 | Schema | 99.05% | 99.05% | 99.05% | 55.24% | 27.90% |
 
-## 3. Verify a smoke test, then run the full paired experiment
+Evidence: `outputs/main_reviewed/` and `outputs/temperature1_reviewed/` each
+contain a manifest, 210 raw generation records and a summary. Gold labels and
+these evidence folders are explicitly included by Git ignore rules.
 
-Keep the final parameters in [configs/experiment.json](configs/experiment.json).
-For a code-path smoke test only:
+## Video and report
 
-```powershell
-python scripts/run_experiment.py --limit 2 --output-dir results/smoke
-```
+Use [the video plan](docs/video_plan.md) and
+[Turkish preparation notes](outputs/video_hazirlik.md) as cues, not a script.
+A1 removes a single return statement from an isolated in-memory copy of the
+actual extraction function; the source files and evaluation results are unchanged.
 
-For the final 210-call run:
-
-```powershell
-python scripts/run_experiment.py --output-dir results/main
-```
-
-The script is resumable. Do not change the config or annotations inside one
-output directory. Final metrics are written to `results/main/summary.json`; all
-raw outputs and failure details are in `results/main/generations.jsonl`, and
-exact reproducibility metadata is in `results/main/manifest.json`.
-
-For fair reporting, parsing/schema failures count as incorrect classifications
-and as predicting no entities (therefore all gold entities for that item become
-false negatives). This avoids calculating task accuracy only on successfully
-parsed outputs.
-
-## 4. Video demo and report
-
-Rehearse, then record this command **without cuts**:
-
-```powershell
+~~~powershell
 python scripts/live_demo.py
-```
+python scripts/defense_ablation.py
+ollama show qwen2.5:3b
+~~~
 
-Use [docs/video_plan.md](docs/video_plan.md) for the required English walkthrough,
-live test, ten defense answers, timing, and upload checklist. Use
-[docs/report_outline.md](docs/report_outline.md) to write the maximum four-page
-technical report from actual saved results.
+The live demo runs two dataset articles and five new fictional samples in both
+settings at both temperatures (28 calls). Record the run without cuts.
+For rebuilding the report only, additionally install ReportLab and run
+`python scripts/build_report.py`. ReportLab is not needed for model evaluation.
 
-## Main experimental parameters
+## Remaining submission steps
 
-The source of truth is `configs/experiment.json`:
+- Resolve whether the instructor accepts the model's research license.
+- Record English video, <=30 minutes: walkthrough; uncut live tests; A1–A4 plus
+  B1, C1, D1, E1, F6, G1. Include a demonstrated experiment and explain actual
+  outputs. Face visible at the beginning, screen and voice throughout.
+- Upload to YouTube as Unlisted; use actual chapter timestamps.
+- Share code, annotations, results and report via GitHub or Drive with view access.
+- Submit both links and live/defense start times once through the supplied form
+  by 22 November 2026, 23:59 Europe/Istanbul.
+- Do not change submitted code/report after the deadline; retain video availability.
 
-- model tag: `qwen2.5:3b`
-- quantization: `Q4_K_M` (captured from `ollama show` in the manifest)
-- seed: `42`
-- temperature: `0.0`
-- top-k: `40`
-- top-p: `0.9`
-- context length: `4096`
-- maximum output tokens: `512`
-- dataset sampling seed: `20261109`
-- entity matching: typed normalized exact match
+## Sources and assistance
 
-Any parameter changed before the final run must also be updated in the report
-and used in the video. The temperature-1.0 video experiment is a named secondary
-experiment, not the main result.
-
-## Submission checklist (deadline: 22 November 2026, 23:59 Europe/Istanbul)
-
-- [ ] At least 100 fully manual, validated entity annotations.
-- [ ] Tests pass; smoke run inspected; final paired run has 105 × 2 records.
-- [ ] Report is PDF, no more than 4 pages, and contains actual tables/discussion.
-- [ ] Exact tag, quantization, Ollama version, seed, context and all generation
-      parameters match the manifest, code, report, and recorded video.
-- [ ] D1 is answered by showing the real `Q4_K_M` value from `ollama show`.
-- [ ] Video is English, ≤30 minutes, screen + voice throughout, face at start.
-- [ ] Live test is uncut; both settings, two temperatures, and five new samples
-      are visible.
-- [ ] YouTube account verified; video uploaded as **Unlisted**, not Private/Public.
-- [ ] Real timestamps are in the description and live/defense starts in the form.
-- [ ] GitHub repository or Drive folder is viewable by anyone with the link.
-- [ ] YouTube link and repository/Drive link submitted once through the form.
-- [ ] Code/report are not changed after the deadline; video remains available
-      until final grades are announced.
-
-## Sources
-
-- [TTC-4900 repository](https://github.com/savasy/TurkishTextClassification)
+- [TTC-4900 dataset](https://github.com/savasy/TurkishTextClassification)
 - [Ollama structured outputs](https://docs.ollama.com/capabilities/structured-outputs)
-- [Official Ollama Python client](https://github.com/ollama/ollama-python)
+- [Ollama Python client](https://github.com/ollama/ollama-python)
+- [Annotation interface reference](https://github.com/emrehann17/structured-text-project):
+  used as a workflow/UI reference, not as this project's gold labels.
+- An AI coding assistant helped implement and review code and draft documentation.
+  The student manually selected the entity labels and must explain the work
+  and results in their own words.
+

@@ -7,7 +7,7 @@ from pathlib import Path
 
 from .schema import CATEGORIES, ENTITY_TYPES
 
-DEFAULT_PATH = Path("data/annotations/eval_gold.jsonl")
+DEFAULT_PATH = Path("outputs/reviewed_annotations_20261119.jsonl")
 
 
 def load_and_validate(

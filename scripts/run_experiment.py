@@ -19,7 +19,7 @@ from nlp_project.ollama_client import generate
 from nlp_project.parsing import parse_raw_and_cleaned, validate_schema
 from nlp_project.prompts import SYSTEM_PROMPT
 from nlp_project.schema import OUTPUT_JSON_SCHEMA
-from nlp_project.annotations import load_and_validate
+from nlp_project.annotations import DEFAULT_PATH, load_and_validate
 
 SETTINGS = ("prompt_only", "schema_constrained")
 
@@ -92,7 +92,7 @@ def build_summary(
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=Path, default=Path("configs/experiment.json"))
-    parser.add_argument("--annotations", type=Path, default=Path("data/annotations/eval_gold.jsonl"))
+    parser.add_argument("--annotations", type=Path, default=DEFAULT_PATH)
     parser.add_argument("--output-dir", type=Path, default=Path("results/main"))
     parser.add_argument("--limit", type=int, help="Smoke-test only; never use for final metrics")
     return parser.parse_args()

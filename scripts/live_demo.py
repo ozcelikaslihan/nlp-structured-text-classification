@@ -24,7 +24,8 @@ NEW_SAMPLES = [
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=Path, default=Path("configs/experiment.json"))
-    parser.add_argument("--dataset-samples", type=Path, default=Path("data/annotations/eval_gold.jsonl"))
+    parser.add_argument("--dataset-samples", type=Path, default=Path("outputs/reviewed_annotations_20261119.jsonl"))
+    parser.add_argument("--log", type=Path, default=Path("outputs/live_rehearsal.jsonl"))
     args = parser.parse_args()
     config = json.loads(args.config.read_text(encoding="utf-8"))
     dataset_records = [json.loads(line) for line in args.dataset_samples.read_text(encoding="utf-8").splitlines()]
@@ -46,6 +47,12 @@ def main() -> None:
                     valid, value, error = validate_schema(parsed.parsed) if parsed.clean_success else (False, None, parsed.error)
                     print(f"\n[{setting}] raw={parsed.raw_success}, cleaned={parsed.clean_success}, schema={valid}")
                     print(output.raw_output)
+                    args.log.parent.mkdir(parents=True, exist_ok=True)
+                    with args.log.open('a', encoding='utf-8') as handle:
+                        handle.write(json.dumps({'label': label, 'text': text, 'temperature': temperature,
+                            'setting': setting, 'raw_output': output.raw_output,
+                            'raw_success': parsed.raw_success, 'clean_success': parsed.clean_success,
+                            'schema_valid': valid, 'seconds': output.elapsed_seconds}, ensure_ascii=False)+'\n')
                     if error:
                         print(f"ERROR: {error}")
                     if value:
